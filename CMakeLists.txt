@@ -108,9 +108,17 @@ if(NOT CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a" AND
     message(FATAL_ERROR "Unsupported Android ABI: ${CMAKE_ANDROID_ARCH_ABI}")
 endif()
 
+# preloader-android 0.2.2's prebuilt 32-bit lib/ARM/libGlossHook.a fails lld linking under NDK r28.
+# LeviLauncher provides libpreloader.so at runtime, so armeabi-v7a defaults to runtime symbol lookup.
+if(CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a")
+    set(_LEVI_LINK_PRELOADER_DEFAULT OFF)
+else()
+    set(_LEVI_LINK_PRELOADER_DEFAULT ON)
+endif()
+
 option(LEVI_LINK_PRELOADER
        "Build and link the preloader target instead of leaving SDK symbols for runtime lookup"
-       ON)
+       ${_LEVI_LINK_PRELOADER_DEFAULT})
 
 if(LEVI_LINK_PRELOADER AND NOT TARGET preloader)
     add_subdirectory("${preloader_android_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/_preloader_android")
@@ -137,10 +145,12 @@ target_compile_options(${MOD_LIBRARY_NAME}
         $<$<COMPILE_LANG_AND_ID:CXX,Clang,GNU>:-fvisibility=hidden -fvisibility-inlines-hidden>
 )
 
-target_link_options(${MOD_LIBRARY_NAME}
-    PRIVATE
-        "-Wl,-z,max-page-size=16384"
-)
+if(CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
+    target_link_options(${MOD_LIBRARY_NAME}
+        PRIVATE
+            "-Wl,-z,max-page-size=16384"
+    )
+endif()
 
 find_library(log-lib log REQUIRED)
 target_link_libraries(${MOD_LIBRARY_NAME} PRIVATE
