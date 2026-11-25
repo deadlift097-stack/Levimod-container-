@@ -6,7 +6,7 @@
 
 namespace {
 
-bool writeJson(const std::filesystem::path& path, const nlohmann::json& value) {
+bool writeJson(const std::filesystem::path &path, const nlohmann::json &value) {
     std::error_code ec;
     std::filesystem::create_directories(path.parent_path(), ec);
     if (ec) {
@@ -26,19 +26,17 @@ bool writeJson(const std::filesystem::path& path, const nlohmann::json& value) {
 
 } // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     if (argc != 2) {
         std::cerr << "Usage: levi_config_generator <output-config-dir>\n";
         return 2;
     }
 
     const std::filesystem::path outputDir = argv[1];
-    if (!writeJson(outputDir / "config.json", mod_container::makeDefaultConfigJson())) {
+    if (!writeJson(outputDir / "config.json", my_mod::makeDefaultConfigJson()))
         return 1;
-    }
-    if (!writeJson(outputDir / "config.schema.json", mod_container::makeConfigSchemaJson())) {
+    if (!writeJson(outputDir / "config.schema.json", my_mod::makeConfigSchemaJson()))
         return 1;
-    }
 
     return 0;
 }

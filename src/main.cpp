@@ -1,5 +1,5 @@
-#include "mod/ContainerMod.h"
+#include "mod/MyMod.h"
 
 #include <pl/Mod.hpp>
 
-PL_REGISTER_MOD(mod_container::ContainerMod, mod_container::ContainerMod::instance());
+PL_REGISTER_MOD(my_mod::MyMod, my_mod::MyMod::instance());
