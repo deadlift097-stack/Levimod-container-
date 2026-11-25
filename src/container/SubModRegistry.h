@@ -26,6 +26,14 @@ class SubModRegistry {
 
     [[nodiscard]] std::size_t size() const { return mEntries.size(); }
 
+    // Ids of every added sub-mod (used to reject plugins that reuse one).
+    [[nodiscard]] std::vector<std::string> ids() const {
+        std::vector<std::string> result;
+        for (const auto &entry : mEntries)
+            result.push_back(entry.mod->id());
+        return result;
+    }
+
   private:
     struct Entry {
         std::unique_ptr<ISubMod> mod;
