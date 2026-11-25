@@ -4,6 +4,8 @@ A native C++ `.levipack` for **Minecraft Bedrock on Android** (via
 [LeviLauncher](https://levimc.org/LeviLauncher/)) that acts as:
 
 - a **mod container**: several native features ("sub-mods") bundled in one `.levipack`,
+  plus **plugins**: extra mods you add by dropping a folder in `plugins/` or a `.so` on the
+  device, with no change to the container ([docs/PLUGINS.md](docs/PLUGINS.md)),
 - a **mod menu**: each sub-mod is a Mod Menu module with a toggle and its own settings,
 - a **settings editor**: typed `config.json` + schema, editable from LeviLauncher,
 - an optional on-screen **MODS button** that opens the Mod Menu.
@@ -21,8 +23,10 @@ and is built on the official template and the
 | Check | Result |
 |---|---|
 | Config generator builds and runs natively; `config.json` / `config.schema.json` verified | done |
-| All mod sources compile cleanly against the real SDK headers (syntax check, stubbed `jni.h` / `android/log.h`) | done |
-| Android NDK build (`package.ps1`) | **not run yet**: run it or let GitHub Actions do it |
+| All mod sources compile cleanly against the real SDK headers (GCC 13 and Clang 18, stubbed `jni.h` / `android/log.h`) | done |
+| Plugin pipeline (real `.so` files -> loader -> registry -> menu callbacks -> config round trip) on a desktop host | done (`tests/host`) |
+| Android build of the container with the plugin packaging | CI-checked earlier up to the SDK pin; plugin code **not yet built with the NDK** |
+| Loading `.so` plugins from the app's folders on a real device | **untested** |
 | Behaviour on a device (menu entries, MODS button, crosshair overlay) | **untested** |
 
 ## Quick start
@@ -65,14 +69,18 @@ scripts/package.ps1       config generation + NDK build + .levipack (from the te
 src/main.cpp              PL_REGISTER_MOD
 src/mod/                  ContainerMod (lifecycle) + typed Config
 src/container/            ISubMod interface, SubModRegistry, MODS button / floating button
-src/submods/              HelloSubMod, CrosshairSubMod (examples)
+src/submods/              HelloSubMod, CrosshairSubMod (built-in examples)
+sdk/ModContainerPlugin.h  stable C ABI for plugins
+plugins/                  one folder per bundled plugin (hello_plugin is the example)
+tests/host/               desktop tests of the plugin loader
 docs/                     architecture, adding a sub-mod, limitations, guide corrections
 ```
 
 ## Documentation
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): how the pieces fit and what is assumed
-- [docs/ADDING_A_SUBMOD.md](docs/ADDING_A_SUBMOD.md): add your own feature in five steps
+- [docs/PLUGINS.md](docs/PLUGINS.md): **add mods to the container** (plugins, drop-in folder)
+- [docs/ADDING_A_SUBMOD.md](docs/ADDING_A_SUBMOD.md): add a built-in feature in five steps
 - [docs/LIMITATIONS.md](docs/LIMITATIONS.md): what a `.levipack` can and cannot do
 - [docs/GUIDE_CORRECTIONS.md](docs/GUIDE_CORRECTIONS.md): where the earlier written guide
   disagreed with the real SDK, and what this project does instead

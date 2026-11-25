@@ -9,10 +9,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(MOD_ID "mod_container" CACHE STRING "LeviLauncher mod package directory name")
 set(MOD_NAME "Mod Container" CACHE STRING "LeviLauncher mod display name")
-set(MOD_AUTHOR "ModCode" CACHE STRING "LeviLauncher mod author")
+set(MOD_AUTHOR "YourName" CACHE STRING "LeviLauncher mod author")
 set(MOD_VERSION "0.1.0" CACHE STRING "LeviLauncher mod version")
 set(MOD_LIBRARY_NAME "mod_container" CACHE STRING "Native library name without lib prefix or .so suffix")
-set(MOD_MINECRAFT_VERSIONS "[\"1.26.66.1\"]" CACHE STRING "Raw JSON array for manifest minecraft_versions")
+set(MOD_MINECRAFT_VERSIONS "[\"1.26.*\"]" CACHE STRING "Raw JSON array for manifest minecraft_versions")
 set(MOD_ICON "" CACHE STRING "Optional package-relative icon path, such as icon.png")
 
 include(FetchContent)
@@ -81,6 +81,12 @@ if(NOT ANDROID)
         VERBATIM
     )
 
+    option(LEVI_HOST_TESTS "Build host-side tests of the plugin loader" OFF)
+    if(LEVI_HOST_TESTS)
+        enable_testing()
+        add_subdirectory(tests/host)
+    endif()
+
     return()
 endif()
 
@@ -124,6 +130,8 @@ add_library(${MOD_LIBRARY_NAME} SHARED
     src/mod/ContainerMod.cpp
     src/container/SubModRegistry.cpp
     src/container/MenuIntegration.cpp
+    src/container/ExternalSubMod.cpp
+    src/container/PluginLoader.cpp
     src/submods/HelloSubMod.cpp
     src/submods/CrosshairSubMod.cpp
 )
@@ -135,6 +143,7 @@ set_target_properties(${MOD_LIBRARY_NAME} PROPERTIES
 target_include_directories(${MOD_LIBRARY_NAME}
     PRIVATE
         src
+        sdk
         "${LEVI_PRELOADER_INCLUDE_DIR}"
 )
 
@@ -180,6 +189,13 @@ configure_file(
     @ONLY
 )
 
+# Plugins: every folder under plugins/ with a CMakeLists.txt is built and packed into submods/.
+include(cmake/ContainerPlugin.cmake)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/plugins/CMakeLists.txt")
+    add_subdirectory(plugins)
+endif()
+get_property(LEVI_PLUGIN_TARGETS GLOBAL PROPERTY LEVI_CONTAINER_PLUGINS)
+
 set(LEVI_PACKAGE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/package")
 set(LEVI_PACKAGE_MOD_DIR "${LEVI_PACKAGE_ROOT}/${MOD_ID}")
 set(LEVI_PACKAGE_FILE "${CMAKE_CURRENT_BINARY_DIR}/${MOD_ID}-${MOD_VERSION}-${CMAKE_ANDROID_ARCH_ABI}.levipack")
@@ -210,6 +226,17 @@ if(NOT MOD_ICON STREQUAL "")
         COMMAND "${CMAKE_COMMAND}" -E copy "${MOD_ICON_SOURCE}" "${LEVI_PACKAGE_MOD_DIR}/${MOD_ICON}")
 endif()
 
+set(LEVI_PACKAGE_PLUGIN_COMMAND)
+if(LEVI_PLUGIN_TARGETS)
+    list(APPEND LEVI_PACKAGE_PLUGIN_COMMAND
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${LEVI_PACKAGE_MOD_DIR}/submods")
+    foreach(_plugin IN LISTS LEVI_PLUGIN_TARGETS)
+        list(APPEND LEVI_PACKAGE_PLUGIN_COMMAND
+            COMMAND "${CMAKE_COMMAND}" -E copy "$<TARGET_FILE:${_plugin}>"
+                    "${LEVI_PACKAGE_MOD_DIR}/submods/$<TARGET_FILE_NAME:${_plugin}>")
+    endforeach()
+endif()
+
 add_custom_target(levi_package
     COMMAND "${CMAKE_COMMAND}" -E rm -rf "${LEVI_PACKAGE_ROOT}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${LEVI_PACKAGE_MOD_DIR}"
@@ -217,9 +244,10 @@ add_custom_target(levi_package
     COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_BINARY_DIR}/manifest.json" "${LEVI_PACKAGE_MOD_DIR}/manifest.json"
     ${LEVI_PACKAGE_ICON_COMMAND}
     ${LEVI_PACKAGE_CONFIG_COMMAND}
+    ${LEVI_PACKAGE_PLUGIN_COMMAND}
     COMMAND "${CMAKE_COMMAND}" -E chdir "${LEVI_PACKAGE_ROOT}" "${CMAKE_COMMAND}" -E tar "cf" "${LEVI_PACKAGE_FILE}" --format=zip "${MOD_ID}"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    DEPENDS ${MOD_LIBRARY_NAME}
+    DEPENDS ${MOD_LIBRARY_NAME} ${LEVI_PLUGIN_TARGETS}
     COMMENT "Packaging ${MOD_ID} for LeviLauncher"
     VERBATIM
 )
