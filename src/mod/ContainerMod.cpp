@@ -3,7 +3,10 @@
 #include <filesystem>
 #include <memory>
 
+#include <set>
+
 #include "container/MenuIntegration.h"
+#include "container/PluginLoader.h"
 #include "submods/CrosshairSubMod.h"
 #include "submods/HelloSubMod.h"
 
@@ -34,6 +37,31 @@ void ContainerMod::registerBuiltins() {
     mBuiltinsRegistered = true;
 }
 
+// Plugins are .so files in <mod dir>/submods (shipped inside the .levipack) or
+// <data dir>/submods (drop-in folder). See docs/PLUGINS.md.
+void ContainerMod::loadExternalPlugins() {
+    if (!config().loadPlugins) {
+        getSelf().getLogger().info("Plugin loading is disabled by config");
+        return;
+    }
+
+    std::error_code ec;
+    const auto dropIn = getSelf().getDataDir() / "submods";
+    std::filesystem::create_directories(dropIn, ec); // so users can find the folder
+
+    std::set<std::string> reserved;
+    for (auto &id : mRegistry.ids())
+        reserved.insert(std::move(id));
+
+    auto result = loadPlugins({getSelf().getModDir() / "submods", dropIn}, reserved,
+                              getSelf().getLogger());
+    for (auto &plugin : result.plugins)
+        mRegistry.add(std::move(plugin));
+    if (result.rejected > 0)
+        getSelf().getLogger().warn("{} plugin file(s) were rejected, see the lines above",
+                                   result.rejected);
+}
+
 bool ContainerMod::load() {
     auto &self = getSelf();
     self.getLogger().debug("Loading...");
@@ -59,6 +87,7 @@ bool ContainerMod::load() {
     }
 
     registerBuiltins();
+    loadExternalPlugins();
     self.getLogger().info("Loaded {} with {} sub-mod(s) from {}", self.getName(), mRegistry.size(),
                           self.getModDir().string());
     return true;

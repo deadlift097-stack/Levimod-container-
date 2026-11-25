@@ -32,6 +32,7 @@ class ContainerMod final : public SubModHost {
 
   private:
     void registerBuiltins();
+    void loadExternalPlugins();
 
     ll::mod::NativeMod &mSelf;
     std::optional<pl::config::ConfigFile<ModConfig>> mConfigFile;

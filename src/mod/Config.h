@@ -2,6 +2,7 @@
 
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <pl/Config.hpp>
 
@@ -21,13 +22,27 @@ struct CrosshairConfig {
     float size = 4.0f; // square edge length, in overlay pixels
 };
 
+// State of a plugin loaded from submods/ (see docs/PLUGINS.md). Managed automatically.
+struct PluginSetting {
+    std::string key;
+    std::string value;
+};
+
+struct PluginState {
+    std::string id;
+    bool enabled = false; // plugins start OFF until the user turns them on
+    std::vector<PluginSetting> settings;
+};
+
 struct ModConfig {
     int version = 1; // bump when the layout changes; ConfigFile rewrites on mismatch
     bool enabled = true;
+    bool loadPlugins = true; // scan submods/ for plugin .so files at startup
     bool showHudButton = true;          // on-screen "MODS" button (applied at startup)
     bool showFloatingMenuButton = true; // launcher's floating menu button (applied at startup)
     HelloConfig hello;
     CrosshairConfig crosshair;
+    std::vector<PluginState> plugins;
 };
 
 nlohmann::json makeDefaultConfigJson();
@@ -71,6 +86,12 @@ template <> struct pl::config::Schema<modcontainer::ModConfig> {
             return {.title = "Version", .readOnly = true};
         if (name == "enabled")
             return {.title = "Enabled", .description = "Master switch for the whole container."};
+        if (name == "loadPlugins")
+            return {.title = "Load plugins",
+                    .description = "Loads extra mods from the submods folder at startup. Takes effect on next launch."};
+        if (name == "plugins")
+            return {.title = "Plugin state",
+                    .description = "Enabled flag and settings of loaded plugins. Managed automatically."};
         if (name == "showHudButton")
             return {.title = "Show MODS button",
                     .description = "Registers an on-screen MODS button that opens the Mod Menu. Takes effect on next launch."};
