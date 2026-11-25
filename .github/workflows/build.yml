@@ -1,0 +1,64 @@
+name: Build .levipack
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Set up Android SDK & NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK 28.2.13676358
+        run: sdkmanager --install "ndk;28.2.13676358"
+
+      - name: Generate host config
+        run: |
+          cmake -S . -B build-config -G Ninja
+          cmake --build build-config --target levi_generate_config
+
+      - name: Build and package (${{ matrix.abi }})
+        run: |
+          NDK_DIR="${ANDROID_HOME}/ndk/28.2.13676358"
+          cmake -S . -B "build-${{ matrix.abi }}" -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="${NDK_DIR}/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI="${{ matrix.abi }}" \
+            -DANDROID_PLATFORM=android-28 \
+            -DANDROID_STL=c++_shared \
+            -DLEVI_PACKAGE_CONFIG_DIR="${{ github.workspace }}/build-config/generated-config"
+          cmake --build "build-${{ matrix.abi }}" --target levi_package
+
+      - name: Verify .levipack
+        run: |
+          PACK=$(ls build-${{ matrix.abi }}/*.levipack)
+          python3 scripts/verify_levipack.py "$PACK" --abi "${{ matrix.abi }}"
+
+      - name: Upload .levipack artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mod_container-${{ matrix.abi }}
+          path: build-${{ matrix.abi }}/*.levipack
+
+      - name: Attach to Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build-${{ matrix.abi }}/*.levipack
