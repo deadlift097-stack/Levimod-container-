@@ -10,6 +10,26 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Desktop-only tests of the plugin loader (no Android needed). Independent of the build job.
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Configure and build tests
+        run: |
+          cmake -S . -B build-host -G Ninja -DLEVI_HOST_TESTS=ON
+          cmake --build build-host
+
+      - name: Run tests
+        run: ctest --test-dir build-host --output-on-failure
+
   build:
     runs-on: ubuntu-latest
 
