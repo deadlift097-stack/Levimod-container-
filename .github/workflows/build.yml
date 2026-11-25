@@ -17,12 +17,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android build tools
+      # The ubuntu-latest runner already ships the Android SDK, so we use its sdkmanager
+      # directly. (android-actions/setup-android failed here: its sdkmanager call exited 1.)
+      - name: Install Android SDK packages
         run: |
-          sdkmanager "platforms;android-28" "ndk;28.2.13676358"
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          SDKM="$(command -v sdkmanager || true)"
+          if [ -z "$SDKM" ]; then SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"; fi
+          echo "Using $SDKM"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-28" "ndk;28.2.13676358"
+          ls "$ANDROID_HOME/ndk"
+
+      - name: Install Ninja
+        run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build
 
