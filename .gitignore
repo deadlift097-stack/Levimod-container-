@@ -1,0 +1,9 @@
+build*/
+_deps/
+dist/
+*.levipack
+*.so
+*.i64
+*.idb
+.vscode/
+.vs/
