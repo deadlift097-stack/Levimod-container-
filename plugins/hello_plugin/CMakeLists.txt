@@ -1,0 +1,1 @@
+add_container_plugin(hello_plugin SOURCES hello_plugin.cpp)
