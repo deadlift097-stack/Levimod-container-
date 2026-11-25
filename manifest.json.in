@@ -1,0 +1,16 @@
+{
+  "type": "preload-native",
+  "name": "@MOD_NAME@",
+  "author": "@MOD_AUTHOR@",
+  "description": "@MOD_DESCRIPTION@",
+  "version": "@MOD_VERSION@",
+  "entry": "lib@MOD_LIBRARY_NAME@.so",
+  "icon": "@MOD_ICON@",
+  "minecraft_versions": @MOD_MINECRAFT_VERSIONS@,
+  "overwrite_files": [
+    "lib@MOD_LIBRARY_NAME@.so",
+    "manifest.json",
+    "config/config.schema.json"
+  ],
+  "overwrite_folders": []
+}
