@@ -1,73 +1,43 @@
-name: Build & Package .levipack
+name: Build
 
 on:
   push:
-    branches: ["main"]
-    tags: ["v*"]
+    branches:
+      - main
+    tags:
+      - "v*"
   pull_request:
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - abi: arm64-v8a
-            link_preloader: "ON"
-          - abi: armeabi-v7a
-            link_preloader: "OFF"
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Ninja and Python
-        run: sudo apt-get update && sudo apt-get install -y ninja-build python3
-
-      - name: Setup Android SDK
+      - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Accept SDK licenses & install NDK 28.2.13676358
+      - name: Install Android build tools
         run: |
-          mkdir -p "$HOME/.android"
-          touch "$HOME/.android/repositories.cfg"
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager --install "ndk;28.2.13676358"
+          sdkmanager "platforms;android-28" "ndk;28.2.13676358"
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
 
-      - name: Generate typed config on host
-        run: |
-          cmake -S . -B build-config -G Ninja
-          cmake --build build-config --target levi_generate_config
+      - name: Build packages
+        shell: pwsh
+        run: ./scripts/package.ps1 -Abi all
 
-      - name: Build and package (${{ matrix.abi }})
-        run: |
-          cmake -S . -B "build-${{ matrix.abi }}" -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/28.2.13676358/build/cmake/android.toolchain.cmake" \
-            -DANDROID_ABI="${{ matrix.abi }}" \
-            -DANDROID_PLATFORM=android-28 \
-            -DANDROID_STL=c++_shared \
-            -DLEVI_LINK_PRELOADER="${{ matrix.link_preloader }}" \
-            -DLEVI_PACKAGE_CONFIG_DIR="$PWD/build-config/generated-config"
-          cmake --build "build-${{ matrix.abi }}" --target levi_package
-
-      - name: Validate .levipack artifact
-        run: |
-          PACK="$(find "build-${{ matrix.abi }}" -maxdepth 1 -name '*.levipack' | head -n 1)"
-          python3 tools/validate_levipack.py "$PACK"
-
-      - name: Upload .levipack artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: levipack-${{ matrix.abi }}
-          path: build-${{ matrix.abi }}/*.levipack
+          name: levipack-mod-container
+          path: build-*/*.levipack
 
-      - name: Attach .levipack to GitHub Release
+      - name: Publish release assets
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: build-${{ matrix.abi }}/*.levipack
+          files: build-*/*.levipack
