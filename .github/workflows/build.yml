@@ -7,12 +7,20 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        abi: [arm64-v8a, armeabi-v7a]
+        include:
+          - abi: arm64-v8a
+            link_preloader: "ON"
+          - abi: armeabi-v7a
+            link_preloader: "OFF"
 
     steps:
       - name: Checkout repository
@@ -21,11 +29,15 @@ jobs:
       - name: Install Ninja and Python
         run: sudo apt-get update && sudo apt-get install -y ninja-build python3
 
-      - name: Setup Android SDK & NDK 28.2.13676358
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install NDK 28.2.13676358
-        run: sdkmanager --install "ndk;28.2.13676358"
+      - name: Accept SDK licenses & install NDK 28.2.13676358
+        run: |
+          mkdir -p "$HOME/.android"
+          touch "$HOME/.android/repositories.cfg"
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager --install "ndk;28.2.13676358"
 
       - name: Generate typed config on host
         run: |
@@ -39,6 +51,7 @@ jobs:
             -DANDROID_ABI="${{ matrix.abi }}" \
             -DANDROID_PLATFORM=android-28 \
             -DANDROID_STL=c++_shared \
+            -DLEVI_LINK_PRELOADER="${{ matrix.link_preloader }}" \
             -DLEVI_PACKAGE_CONFIG_DIR="$PWD/build-config/generated-config"
           cmake --build "build-${{ matrix.abi }}" --target levi_package
 
