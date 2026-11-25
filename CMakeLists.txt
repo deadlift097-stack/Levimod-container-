@@ -1,18 +1,17 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(levilauncher_mod_container LANGUAGES CXX)
+project(levilauncher_fabric_porting_kit LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(MOD_ID "mod_container" CACHE STRING "LeviLauncher mod package directory name")
-set(MOD_NAME "Mod Container" CACHE STRING "LeviLauncher mod display name")
-set(MOD_AUTHOR "YourName" CACHE STRING "LeviLauncher mod author")
-set(MOD_DESCRIPTION "Native C++ mod container and Mod Menu hub for LeviLauncher Android." CACHE STRING "LeviLauncher mod description")
+set(MOD_ID "my_android_mod" CACHE STRING "LeviLauncher mod package directory name")
+set(MOD_NAME "My Android Mod" CACHE STRING "LeviLauncher mod display name")
+set(MOD_AUTHOR "your_name" CACHE STRING "LeviLauncher mod author")
 set(MOD_VERSION "0.1.0" CACHE STRING "LeviLauncher mod version")
-set(MOD_LIBRARY_NAME "mod_container" CACHE STRING "Native library name without lib prefix or .so suffix")
+set(MOD_LIBRARY_NAME "my_android_mod" CACHE STRING "Native library name without lib prefix or .so suffix")
 set(MOD_MINECRAFT_VERSIONS "[\"1.26.*\"]" CACHE STRING "Raw JSON array for manifest minecraft_versions")
 set(MOD_ICON "" CACHE STRING "Optional package-relative icon path, such as icon.png")
 
@@ -95,9 +94,11 @@ set(LEVI_PACKAGE_CONFIG_SCHEMA "${LEVI_PACKAGE_CONFIG_DIR}/config.schema.json")
 if(NOT IS_DIRECTORY "${LEVI_PACKAGE_CONFIG_DIR}")
     message(FATAL_ERROR "LEVI_PACKAGE_CONFIG_DIR must be a directory: ${LEVI_PACKAGE_CONFIG_DIR}")
 endif()
+
 if(NOT EXISTS "${LEVI_PACKAGE_CONFIG_JSON}")
     message(FATAL_ERROR "LEVI_PACKAGE_CONFIG_DIR must contain config.json: ${LEVI_PACKAGE_CONFIG_JSON}")
 endif()
+
 if(NOT EXISTS "${LEVI_PACKAGE_CONFIG_SCHEMA}")
     message(FATAL_ERROR "LEVI_PACKAGE_CONFIG_DIR must contain config.schema.json: ${LEVI_PACKAGE_CONFIG_SCHEMA}")
 endif()
@@ -118,11 +119,7 @@ endif()
 add_library(${MOD_LIBRARY_NAME} SHARED
     src/main.cpp
     src/mod/Config.cpp
-    src/mod/ContainerMod.cpp
-    src/mod/GameWatcher.cpp
-    src/mod/MenuBridge.cpp
-    src/mod/SubModRegistry.cpp
-    src/submods/DiagnosticsSubMod.cpp
+    src/mod/MyMod.cpp
 )
 
 set_target_properties(${MOD_LIBRARY_NAME} PROPERTIES
@@ -188,13 +185,16 @@ if(NOT MOD_ICON STREQUAL "")
     if(IS_ABSOLUTE "${MOD_ICON}")
         message(FATAL_ERROR "MOD_ICON must be a package-relative path")
     endif()
+
     if(MOD_ICON MATCHES "(^|/)\\.\\.(/|$)")
         message(FATAL_ERROR "MOD_ICON must not contain ..")
     endif()
+
     set(MOD_ICON_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/${MOD_ICON}")
     if(NOT EXISTS "${MOD_ICON_SOURCE}")
         message(FATAL_ERROR "MOD_ICON does not exist: ${MOD_ICON_SOURCE}")
     endif()
+
     get_filename_component(MOD_ICON_DIR "${MOD_ICON}" DIRECTORY)
     if(NOT MOD_ICON_DIR STREQUAL "")
         list(APPEND LEVI_PACKAGE_ICON_COMMAND

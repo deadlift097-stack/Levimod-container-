@@ -1,28 +1,36 @@
-# LeviLauncher Mod Container
+# LeviLauncher Fabric Porting Kit
 
-A native C++ **Mod Container & Mod Menu** `.levipack` for Minecraft: Bedrock Edition on Android ([LeviLauncher](https://github.com/LiteLDev/LeviLaunchroid)), built on the official [levilauncher-android-mod-template](https://github.com/LiteLDev/levilauncher-android-mod-template) and [LeviMC's Android native mod tutorial](https://levimc.org/tutorials/develop/first-android-mod/).
+A **native Android mod scaffold, porting guide, and `.levipack` validation toolkit** for rewriting Minecraft Java Edition (Fabric) mods into C++ `preload-native` mods for **LeviLauncher Android** (`LiteLDev/preloader-android`).
 
-## What this project does (and cannot do)
+> **Important Technical Scope:**  
+> This repository is **not** an automatic `.jar` → `.levipack` converter. Fabric mods use JVM bytecode and Mixins targeting Java classes, whereas LeviLauncher `.levipack` native mods are Android NDK C++ shared libraries (`.so`) hooking Bedrock's closed C++ engine (`libminecraftpe.so`). See [`docs/WHY_NO_AUTO_CONVERTER.md`](docs/WHY_NO_AUTO_CONVERTER.md).
 
-- **Does:**
-  - Registers a central **Mod Container** module and per-sub-mod toggles in the LeviLauncher Mod Menu (`pl::modmenu::ModuleBuilder`).
-  - Optionally registers a floating **MODS** HUD button (`pl::modmenu::ButtonBuilder`) that opens/closes the Mod Menu.
-  - Persists typed configuration (`config/config.json` and `config/config.schema.json`) through `pl::config::ConfigFile<ModConfig>`.
-  - Provides a clean `ISubMod` C++ interface and a crash-safe `RTLD_NOLOAD` poll-then-settle `GameWatcher` for attaching verified native Bedrock hooks.
-- **Cannot do:**
-  - Cannot load, execute, or convert Java Edition **Fabric `.jar`** mods. Java Fabric bytecode targets the JVM and Java Edition's engine; `.levipack` mods are native ARM64 C++ libraries loaded into Bedrock Edition. To port a Fabric mod, reimplement its features in C++ as an `ISubMod`.
+## What This Project Provides
 
-## Prerequisites
+1. **Ready-to-Build Native Mod Template** (`CMakeLists.txt`, `src/`, `manifest.json.in`)  
+   Follows the official [LeviMC Android Mod Tutorial](https://levimc.org/tutorials/develop/first-android-mod/) and `QYCottage/levilauncher-android-mod-template` using `preloader-android` (`0.2.2`), typed config generation (`config.json` + `config.schema.json`), and 16 KB page alignment (`-Wl,-z,max-page-size=16384`).
+2. **Fabric Feasibility Assessor** (`tools/assess_fabric_mod.py`)  
+   Inspects a Fabric `.jar` (`fabric.mod.json`, Mixin configs, class references) and outputs a native Bedrock C++ rewrite feasibility report.
+3. **`.levipack` Test & Validation Harness** (`tools/validate_levipack.py`)  
+   Verifies archive layout, `manifest.json`, `"type": "preload-native"`, ELF64 AArch64 (`arm64-v8a`), `PLGetModRegistration` dynamic export, 16 KB `PT_LOAD` alignment, and config JSON schemas.
+4. **Offline Signature Gate** (`tools/check_mod_signatures.py`)  
+   Checks every `constexpr std::string_view` byte signature in your C++ source against one or more `libminecraftpe.so` builds (`UNIQUE` vs `MISSING`/`AMBIGUOUS`).
+5. **Porting & Crash-Safety Docs** (`docs/`)  
+   Feature mapping, safe `RTLD_NOLOAD` attach lifecycle, and BedrockTools hooking patterns.
 
-- CMake 3.22+ and Ninja
-- Host C++ compiler (for `levi_config_generator`): Visual Studio C++ on Windows, or GCC/Clang on Linux/macOS
-- Android SDK (API 28) + NDK `28.2.13676358`
-- PowerShell 7+ (or Windows PowerShell on Windows; `scripts/package.sh` is also provided for Linux/macOS)
-- Python 3.10+ (for `scripts/verify_levipack.py`)
+## Prerequisites (from LeviMC Tutorial)
 
-## Build
+- **Android SDK** Platform **Android 9.0 (API 28)**
+- **Android NDK** **`28.2.13676358`** (or compatible)
+- **CMake** `3.22+` and **Ninja**
+- **Host C++ Compiler** (Visual Studio *Desktop development with C++* on Windows, or GCC/Clang on Linux/macOS — required to run `levi_config_generator` on the host)
+- **PowerShell 7+** (or Windows PowerShell) / Bash on Linux & macOS
+- **Python 3.10+** (for `tools/` validation and assessment scripts)
+- **ARM64 Android device** (Android 9+) with Minecraft Bedrock & LeviLauncher Android
 
-### Windows / cross-platform PowerShell
-```powershell
-$env:ANDROID_HOME = "C:/Users/<you>/AppData/Local/Android/Sdk"
-./scripts/package.ps1 -Abi arm64-v8a
+## Quick Start
+
+### 1. Assess a Fabric Mod (Optional)
+
+```bash
+python3 tools/assess_fabric_mod.py path/to/some-fabric-mod.jar

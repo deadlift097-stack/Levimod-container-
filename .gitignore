@@ -1,9 +1,60 @@
-build*/
+# CMake & Ninja build directories
+build/
+build-*/
+cmake-build-*/
 _deps/
-dist/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+build.ninja
+.ninja_deps
+.ninja_log
+
+# IDE & Editor files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Compiled native artifacts & mod packages
 *.levipack
 *.so
+*.a
+*.o
+*.obj
+*.dll
+*.exe
+
+# Reverse-engineering & binary analysis artifacts
+libminecraftpe*.so
 *.i64
 *.idb
-.vscode/
-.vs/
+*.id0
+*.id1
+*.id2
+*.nam
+*.til
+*.gzf
+*.gpr
+*.rep/
+
+# Generated analysis / verification outputs
+sig_report.json
+elf_facts.json
+ida_targets.json
+ida_decompile_report.json
+generated-config/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# OS & miscellaneous
+.DS_Store
+Thumbs.db
+*.log
