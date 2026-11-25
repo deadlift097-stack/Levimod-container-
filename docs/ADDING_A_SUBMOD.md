@@ -1,4 +1,7 @@
-# Adding a sub-mod
+# Adding a built-in sub-mod
+
+This compiles the feature into the container. To add a mod **without touching the container**
+(separate `.so`, optional drop-in), see [PLUGINS.md](PLUGINS.md).
 
 Use `src/submods/HelloSubMod.*` as the template.
 

@@ -17,6 +17,15 @@ LeviLauncher ──loads──▶ libmod_container.so
    ISubMod, toggle ↔ start/stop  on-screen MODS button
 ```
 
+## Plugins
+
+Besides compiled-in sub-mods, `loadExternalPlugins()` (in `load()`) scans `<mod dir>/submods`
+and `<data dir>/submods` for `.so` files. `PluginLoader` `dlopen`s each, calls
+`ModContainerGetPlugin`, validates the C descriptor (`sdk/ModContainerPlugin.h`) and wraps it
+in `ExternalSubMod`, which implements `ISubMod`. From then on a plugin is handled exactly
+like a built-in sub-mod by `SubModRegistry`; its enabled flag and settings live in
+`ModConfig::plugins`. Libraries are never `dlclose`d. See [PLUGINS.md](PLUGINS.md).
+
 ## Flow
 
 1. `load()` creates `data/` and `config/`, loads `config/config.json` (created from the
@@ -50,5 +59,15 @@ before the game ever runs.
   every launcher build.
 - `RectFilled` with `color = 0xFFFFFFFF` is opaque white; surface size can be 0 during
   `enable()`, in which case the crosshair asks you to toggle it once.
+- The preloader/launcher allows `dlopen` of `.so` files from the mod and data folders (the
+  preloader does the same for the container itself). Not verified on a device.
 - `setFloatingMenuButtonVisible` only works inside a lifecycle callback, so
   `showFloatingMenuButton` and `showHudButton` apply at next launch, not live.
+
+## SDK version
+
+`CMakeLists.txt` pins `preloader-android` to commit `cc08b40`, the one bundled by
+LeviLauncher-Android at the time of writing. Older tags (<= 0.2.3) do not have the floating
+button, `requestOpenMenu`, `getHudSurfaceSize` or `ConfigType::Text`, so the build fails
+against them. If your launcher is older than that commit, the mod may fail to load with an
+undefined-symbol error; update LeviLauncher.
