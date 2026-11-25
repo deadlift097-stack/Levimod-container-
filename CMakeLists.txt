@@ -9,7 +9,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(MOD_ID "mod_container" CACHE STRING "LeviLauncher mod package directory name")
 set(MOD_NAME "Mod Container" CACHE STRING "LeviLauncher mod display name")
-set(MOD_AUTHOR "YourName" CACHE STRING "LeviLauncher mod author")
+set(MOD_AUTHOR "ModCode" CACHE STRING "LeviLauncher mod author")
 set(MOD_VERSION "0.1.0" CACHE STRING "LeviLauncher mod version")
 set(MOD_LIBRARY_NAME "mod_container" CACHE STRING "Native library name without lib prefix or .so suffix")
 set(MOD_MINECRAFT_VERSIONS "[\"1.26.**.*\"]" CACHE STRING "Raw JSON array for manifest minecraft_versions")
