@@ -1,0 +1,16 @@
+name: Lint & Tooling Checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile-check Python tools
+        run: python3 -m py_compile tools/validate_levipack.py tools/assess_fabric_mod.py tools/check_mod_signatures.py
