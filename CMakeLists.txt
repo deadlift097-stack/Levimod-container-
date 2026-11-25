@@ -1,17 +1,17 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(levilauncher_fabric_porting_kit LANGUAGES CXX)
+project(mod_container LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(MOD_ID "my_android_mod" CACHE STRING "LeviLauncher mod package directory name")
-set(MOD_NAME "My Android Mod" CACHE STRING "LeviLauncher mod display name")
-set(MOD_AUTHOR "your_name" CACHE STRING "LeviLauncher mod author")
+set(MOD_ID "mod_container" CACHE STRING "LeviLauncher mod package directory name")
+set(MOD_NAME "Mod Container" CACHE STRING "LeviLauncher mod display name")
+set(MOD_AUTHOR "YourName" CACHE STRING "LeviLauncher mod author")
 set(MOD_VERSION "0.1.0" CACHE STRING "LeviLauncher mod version")
-set(MOD_LIBRARY_NAME "my_android_mod" CACHE STRING "Native library name without lib prefix or .so suffix")
+set(MOD_LIBRARY_NAME "mod_container" CACHE STRING "Native library name without lib prefix or .so suffix")
 set(MOD_MINECRAFT_VERSIONS "[\"1.26.*\"]" CACHE STRING "Raw JSON array for manifest minecraft_versions")
 set(MOD_ICON "" CACHE STRING "Optional package-relative icon path, such as icon.png")
 
@@ -108,17 +108,9 @@ if(NOT CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a" AND
     message(FATAL_ERROR "Unsupported Android ABI: ${CMAKE_ANDROID_ARCH_ABI}")
 endif()
 
-# preloader-android 0.2.2's prebuilt 32-bit lib/ARM/libGlossHook.a fails lld linking under NDK r28.
-# LeviLauncher provides libpreloader.so at runtime, so armeabi-v7a defaults to runtime symbol lookup.
-if(CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a")
-    set(_LEVI_LINK_PRELOADER_DEFAULT OFF)
-else()
-    set(_LEVI_LINK_PRELOADER_DEFAULT ON)
-endif()
-
 option(LEVI_LINK_PRELOADER
        "Build and link the preloader target instead of leaving SDK symbols for runtime lookup"
-       ${_LEVI_LINK_PRELOADER_DEFAULT})
+       ON)
 
 if(LEVI_LINK_PRELOADER AND NOT TARGET preloader)
     add_subdirectory("${preloader_android_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/_preloader_android")
@@ -127,7 +119,11 @@ endif()
 add_library(${MOD_LIBRARY_NAME} SHARED
     src/main.cpp
     src/mod/Config.cpp
-    src/mod/MyMod.cpp
+    src/mod/ContainerMod.cpp
+    src/container/SubModRegistry.cpp
+    src/container/MenuIntegration.cpp
+    src/submods/HelloSubMod.cpp
+    src/submods/CrosshairSubMod.cpp
 )
 
 set_target_properties(${MOD_LIBRARY_NAME} PROPERTIES
@@ -145,12 +141,10 @@ target_compile_options(${MOD_LIBRARY_NAME}
         $<$<COMPILE_LANG_AND_ID:CXX,Clang,GNU>:-fvisibility=hidden -fvisibility-inlines-hidden>
 )
 
-if(CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
-    target_link_options(${MOD_LIBRARY_NAME}
-        PRIVATE
-            "-Wl,-z,max-page-size=16384"
-    )
-endif()
+target_link_options(${MOD_LIBRARY_NAME}
+    PRIVATE
+        "-Wl,-z,max-page-size=16384"
+)
 
 find_library(log-lib log REQUIRED)
 target_link_libraries(${MOD_LIBRARY_NAME} PRIVATE

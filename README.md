@@ -1,36 +1,92 @@
-# LeviLauncher Fabric Porting Kit
+# Mod Container for LeviLauncher Android
 
-A **native Android mod scaffold, porting guide, and `.levipack` validation toolkit** for rewriting Minecraft Java Edition (Fabric) mods into C++ `preload-native` mods for **LeviLauncher Android** (`LiteLDev/preloader-android`).
+A native C++ `.levipack` for **Minecraft Bedrock on Android** (via
+[LeviLauncher](https://levimc.org/LeviLauncher/)) that acts as:
 
-> **Important Technical Scope:**  
-> This repository is **not** an automatic `.jar` → `.levipack` converter. Fabric mods use JVM bytecode and Mixins targeting Java classes, whereas LeviLauncher `.levipack` native mods are Android NDK C++ shared libraries (`.so`) hooking Bedrock's closed C++ engine (`libminecraftpe.so`). See [`docs/WHY_NO_AUTO_CONVERTER.md`](docs/WHY_NO_AUTO_CONVERTER.md).
+- a **mod container**: several native features ("sub-mods") bundled in one `.levipack`,
+- a **mod menu**: each sub-mod is a Mod Menu module with a toggle and its own settings,
+- a **settings editor**: typed `config.json` + schema, editable from LeviLauncher,
+- an optional on-screen **MODS button** that opens the Mod Menu.
 
-## What This Project Provides
+It follows the official tutorial, [Your first Android native mod](https://levimc.org/tutorials/develop/first-android-mod/),
+and is built on the official template and the
+[Preloader SDK](https://github.com/LiteLDev/preloader-android).
 
-1. **Ready-to-Build Native Mod Template** (`CMakeLists.txt`, `src/`, `manifest.json.in`)  
-   Follows the official [LeviMC Android Mod Tutorial](https://levimc.org/tutorials/develop/first-android-mod/) and `QYCottage/levilauncher-android-mod-template` using `preloader-android` (`0.2.2`), typed config generation (`config.json` + `config.schema.json`), and 16 KB page alignment (`-Wl,-z,max-page-size=16384`).
-2. **Fabric Feasibility Assessor** (`tools/assess_fabric_mod.py`)  
-   Inspects a Fabric `.jar` (`fabric.mod.json`, Mixin configs, class references) and outputs a native Bedrock C++ rewrite feasibility report.
-3. **`.levipack` Test & Validation Harness** (`tools/validate_levipack.py`)  
-   Verifies archive layout, `manifest.json`, `"type": "preload-native"`, ELF64 AArch64 (`arm64-v8a`), `PLGetModRegistration` dynamic export, 16 KB `PT_LOAD` alignment, and config JSON schemas.
-4. **Offline Signature Gate** (`tools/check_mod_signatures.py`)  
-   Checks every `constexpr std::string_view` byte signature in your C++ source against one or more `libminecraftpe.so` builds (`UNIQUE` vs `MISSING`/`AMBIGUOUS`).
-5. **Porting & Crash-Safety Docs** (`docs/`)  
-   Feature mapping, safe `RTLD_NOLOAD` attach lifecycle, and BedrockTools hooking patterns.
+> **Not a Fabric loader.** A `.levipack` is native ARM64 code for Minecraft: Bedrock.
+> Fabric mods are Java bytecode for Minecraft: Java Edition. Nothing here can load a
+> `.jar`. See [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
-## Prerequisites (from LeviMC Tutorial)
+## Status
 
-- **Android SDK** Platform **Android 9.0 (API 28)**
-- **Android NDK** **`28.2.13676358`** (or compatible)
-- **CMake** `3.22+` and **Ninja**
-- **Host C++ Compiler** (Visual Studio *Desktop development with C++* on Windows, or GCC/Clang on Linux/macOS — required to run `levi_config_generator` on the host)
-- **PowerShell 7+** (or Windows PowerShell) / Bash on Linux & macOS
-- **Python 3.10+** (for `tools/` validation and assessment scripts)
-- **ARM64 Android device** (Android 9+) with Minecraft Bedrock & LeviLauncher Android
+| Check | Result |
+|---|---|
+| Config generator builds and runs natively; `config.json` / `config.schema.json` verified | done |
+| All mod sources compile cleanly against the real SDK headers (syntax check, stubbed `jni.h` / `android/log.h`) | done |
+| Android NDK build (`package.ps1`) | **not run yet**: run it or let GitHub Actions do it |
+| Behaviour on a device (menu entries, MODS button, crosshair overlay) | **untested** |
 
-## Quick Start
+## Quick start
 
-### 1. Assess a Fabric Mod (Optional)
+Requirements are the same as the tutorial: Android SDK + NDK `28.2.13676358`, CMake 3.22+,
+Ninja, PowerShell 7, Git, and a PC compiler (the build runs a small config generator on
+the PC).
 
-```bash
-python3 tools/assess_fabric_mod.py path/to/some-fabric-mod.jar
+```powershell
+git clone https://github.com/<you>/levipack-mod-container
+cd levipack-mod-container
+
+$env:ANDROID_HOME = "C:/Users/<you>/AppData/Local/Android/Sdk"
+./scripts/package.ps1 -Abi arm64-v8a
+```
+
+Result: `build-arm64-v8a/mod_container-0.1.0-arm64-v8a.levipack`.
+
+Or push to GitHub: the **Build** workflow produces the `.levipack` as an artifact, and a
+tag `v*` attaches it to a release.
+
+### Install
+
+1. Copy the `.levipack` to the phone's **Download** folder.
+2. LeviLauncher → **Launch** → **Manage** on the Mods card → **Add Mod** → pick the file.
+3. Start the game. Open the Mod Menu (floating button or **MODS**) and toggle the sub-mods.
+4. Optional log check: `adb logcat | grep "Mod Container"` should show
+   `[hello] Hello from Mod Container!`.
+
+Before building, set `MOD_AUTHOR` in `CMakeLists.txt` and make sure `MOD_MINECRAFT_VERSIONS`
+matches the Minecraft version on your phone (default `["1.26.*"]`). Keep `MOD_ID` stable
+after your first release.
+
+## Layout
+
+```
+CMakeLists.txt            mod id/name/version, sources, packaging target
+manifest.json.in          becomes manifest.json in the .levipack
+scripts/package.ps1       config generation + NDK build + .levipack (from the template)
+src/main.cpp              PL_REGISTER_MOD
+src/mod/                  ContainerMod (lifecycle) + typed Config
+src/container/            ISubMod interface, SubModRegistry, MODS button / floating button
+src/submods/              HelloSubMod, CrosshairSubMod (examples)
+docs/                     architecture, adding a sub-mod, limitations, guide corrections
+```
+
+## Documentation
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): how the pieces fit and what is assumed
+- [docs/ADDING_A_SUBMOD.md](docs/ADDING_A_SUBMOD.md): add your own feature in five steps
+- [docs/LIMITATIONS.md](docs/LIMITATIONS.md): what a `.levipack` can and cannot do
+- [docs/GUIDE_CORRECTIONS.md](docs/GUIDE_CORRECTIONS.md): where the earlier written guide
+  disagreed with the real SDK, and what this project does instead
+
+## Going further
+
+Features that change game behaviour need hooks or patches
+([Hook API](https://levimc.org/LeviLamina/developer_guides/android/api/hook/),
+[Signature API](https://levimc.org/LeviLamina/developer_guides/android/api/signature/)).
+Those are version-specific; the BedrockTools skill (`skills/references/` in that repo)
+documents the workflow. Install hooks from `start()`, never from a constructor.
+
+## Credits
+
+Template: `levilauncher-android-mod-template`. SDK: `LiteLDev/preloader-android`.
+Tutorial: levimc.org. No license file is included yet; add the one you want before
+publishing.
