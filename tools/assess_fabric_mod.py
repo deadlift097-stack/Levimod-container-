@@ -49,7 +49,10 @@ def assess_jar(jar_path: Path) -> int:
         else:
             print("## Warning: `fabric.mod.json` not found (may not be a Fabric mod JAR).\n")
 
-        mixin_files = [n for n in names if n.endswith(".mixins.json") or "mixin" in n.lower() and n.endswith(".json")]
+        mixin_files = [
+            n for n in names
+            if n.endswith(".mixins.json") or ("mixin" in n.lower() and n.endswith(".json"))
+        ]
         if mixin_files:
             print("## Mixin Configurations Detected")
             for mf in mixin_files:
